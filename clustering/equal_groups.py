@@ -13,7 +13,10 @@ import numpy as np
 import scipy.sparse as sp
 
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
-from sklearn.cluster import k_means_
+
+from sklearn.cluster import KMeans
+
+# from sklearn.cluster import k_means_
 from sklearn.cluster import _k_means
 from sklearn.externals.joblib import Parallel
 from sklearn.externals.joblib import delayed
@@ -476,8 +479,9 @@ def _kmeans_single(X, n_clusters, x_squared_norms, max_iter=300,
     random_state = check_random_state(random_state)
 
     best_labels, best_inertia, best_centers = None, None, None
+    model = KMeans(n_clusters=n_clusters, max_iter=1, n_init=1)
     # init
-    centers = k_means_._init_centroids(X, n_clusters, init, random_state=random_state,
+    centers = model._init_centroids(X, init, random_state=random_state,
                               x_squared_norms=x_squared_norms)
     if verbose:
         print("Initialization complete")
@@ -489,6 +493,9 @@ def _kmeans_single(X, n_clusters, x_squared_norms, max_iter=300,
     # iterations
     for i in range(max_iter):
         centers_old = centers.copy()
+
+        model.fit(X)
+        
         # labels assignment is also called the E-step of EM
         labels, inertia = \
             _labels_inertia(X, x_squared_norms, centers,
@@ -497,11 +504,7 @@ def _kmeans_single(X, n_clusters, x_squared_norms, max_iter=300,
 
         sample_weight = np.asarray([1.0] * len(labels))
         # computation of the means is also called the M-step of EM
-        if sp.issparse(X):
-            centers = _k_means._centers_sparse(X, sample_weight, labels, n_clusters,
-                                               distances)
-        else:
-            centers = _k_means._centers_dense(X, sample_weight, labels, n_clusters, distances)
+        centers = model.cluster_centers_
 
         if verbose:
             print("Iteration %2d, inertia %.3f" % (i, inertia))
